@@ -1,0 +1,457 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相遇问题</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #8e44ad;
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .problem-text {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+        }
+        @media (max-width: 900px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+        
+        .steps-panel {
+            padding: 20px;
+            border-right: 1px solid #eee;
+        }
+        .steps-panel h2 {
+            color: #2c3e50;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 12px;
+        }
+        .step-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(52,152,219,0.1);
+        }
+        .step-card.active {
+            border-color: var(--primary);
+            background: #ebf5fb;
+        }
+        .step-title {
+            font-weight: bold;
+            font-size: 1em;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .step-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #555;
+        }
+        .formula {
+            background: #f1f2f6;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 3px 0;
+        }
+        
+        .canvas-panel {
+            background: #2c3e50;
+            padding: 20px;
+        }
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        canvas {
+            background-image: linear-gradient(to bottom, #87CEEB 0%, #e0f6ff 60%);
+            border-radius: 8px;
+            width: 100%;
+            display: block;
+        }
+        .controls-bar {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { background: #2980b9; }
+        .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        input[type=range] { cursor: pointer; }
+        
+        .info-bar {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+        }
+        .info-item { color: #555; }
+        .info-item .val { font-weight: bold; }
+        .info-item.jia .val { color: #3498db; }
+        .info-item.yi .val { color: #8e44ad; }
+        .info-item.time .val { color: #e67e22; }
+        
+        .solution-section {
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+        }
+        .solution-section h2 {
+            color: #2ecc71;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        .solution-step {
+            margin-bottom: 15px;
+            padding-left: 15px;
+            border-left: 3px solid var(--primary);
+        }
+        .solution-step strong { color: var(--primary); }
+        .solution-step p { margin: 8px 0; line-height: 1.6; }
+        .solution-formula {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 8px 0;
+            line-height: 1.8;
+        }
+        .answer-box {
+            background: rgba(46,204,113,0.15);
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 1rem;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🚶 相遇问题</h1>
+        <p class="problem-text">甲、乙两人分别从相距400米的A、B两地同时出发，相向而行。甲、乙两人的速度之比为5:3。求甲要走多少米才能遇到乙？</p>
+    </div>
+    
+    <div class="content-grid">
+        <div class="steps-panel">
+            <h2>📋 解题步骤</h2>
+            
+            <div class="step-card active">
+                <div class="step-title">相遇过程演示</div>
+                <div class="step-content">
+                    甲从A向右，乙从B向左，相向而行。<br>
+                    速度比 5:3，相遇时路程比也是 5:3。<br>
+                    <span class="formula">总路程 = 400m = 5份 + 3份 = 8份</span><br>
+                    每份 = 400 ÷ 8 = <strong>50米</strong><br>
+                    甲走了 5份 = <strong>250米</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-panel">
+            <div class="canvas-header">
+                <span>🔵 场景：相向而行（相遇）</span>
+                <span id="timeDisplay">经过时间：0 秒</span>
+            </div>
+            <canvas id="simCanvas" width="700" height="350"></canvas>
+            <div class="controls-bar">
+                <button class="btn" id="btnReset" onclick="resetScene()">⏮️ 重置</button>
+                <button class="btn" id="btnPlay" onclick="togglePlay()">▶ 开始</button>
+                <div class="speed-control">
+                    <label>速度: <span id="speedVal">1.0x</span></label>
+                    <input type="range" id="speedSlider" min="0.5" max="4" step="0.5" value="1" oninput="updateSpeed()">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-bar">
+        <div class="info-item time">⏱️ <span class="val" id="timeVal">0</span> / 10 秒</div>
+        <div class="info-item jia">🔵 甲: <span class="val" id="jiaPos">0</span> 米</div>
+        <div class="info-item yi">🟣 乙: <span class="val" id="yiPos">400</span> 米</div>
+        <div class="info-item">📏 剩余: <span class="val" id="distVal">400</span> 米</div>
+    </div>
+    
+    <div class="solution-section">
+        <h2>📖 完整解题步骤</h2>
+        
+        <div class="solution-step">
+            <strong>第一步：理解题意</strong>
+            <p>甲从A地（0米）出发，乙从B地（400米）出发，两人相向而行，相遇时走的总路程等于两地距离。</p>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第二步：根据速度比求路程比</strong>
+            <p>相遇时，路程比 = 速度比 = 5 : 3</p>
+            <div class="solution-formula">
+                路程比 = 速度比 = 5 : 3
+            </div>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第三步：求每份距离</strong>
+            <p>总路程400米，分成 5 + 3 = 8 份</p>
+            <div class="solution-formula">
+                每份距离 = 400 ÷ 8 = <strong>50</strong> 米
+            </div>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第四步：求甲走的路程</strong>
+            <p>甲走了5份</p>
+            <div class="solution-formula">
+                甲走的路程 = 5 × 50 = <strong>250</strong> 米
+            </div>
+        </div>
+        
+        <div class="answer-box">
+            ✅ 答案：甲要走 <strong>250米</strong> 才能遇到乙
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const ROAD_TOP = H * 0.55;
+const ROAD_H = 110;
+const ROAD_CENTER = ROAD_TOP + ROAD_H / 2;
+
+// 物理参数
+const TOTAL_DIST = 400;
+const SPEED_JIA = 25;  // 米/秒
+const SPEED_YI = 15;    // 米/秒
+const ANIM_DURATION = 10; // 动画总时长10秒
+
+let progress = 0; // 0 ~ 1
+let isPlaying = false;
+let speedMult = 1;
+let animId = null;
+
+function drawScene() {
+    // 草地
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(0, ROAD_TOP + ROAD_H, W, H - ROAD_TOP - ROAD_H);
+    
+    // 公路
+    ctx.fillStyle = '#7f8c8d';
+    ctx.fillRect(0, ROAD_TOP, W, ROAD_H);
+    
+    // 公路中线
+    ctx.beginPath();
+    ctx.setLineDash([15, 15]);
+    ctx.moveTo(0, ROAD_CENTER);
+    ctx.lineTo(W, ROAD_CENTER);
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 标尺
+    const leftX = 50, rightX = W - 50;
+    for (let i = 0; i <= 8; i++) {
+        const x = leftX + (rightX - leftX) * i / 8;
+        ctx.beginPath();
+        ctx.moveTo(x, ROAD_TOP);
+        ctx.lineTo(x, ROAD_TOP + 8);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = (i === 0 || i === 8) ? '#e74c3c' : 'white';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText((i * 50) + 'm', x, ROAD_TOP - 8);
+    }
+    
+    // A、B标记
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.beginPath();
+    ctx.arc(leftX, ROAD_TOP - 20, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('A', leftX, ROAD_TOP - 38);
+    
+    ctx.beginPath();
+    ctx.arc(rightX, ROAD_TOP - 20, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('B', rightX, ROAD_TOP - 38);
+}
+
+function drawPeople(posJia, posYi) {
+    const leftX = 50, rightX = W - 50;
+    const scale = (rightX - leftX) / TOTAL_DIST;
+    
+    const pxJia = leftX + posJia * scale;
+    const pxYi = leftX + posYi * scale;
+    
+    // 轨迹 - 甲的轨迹（从左开始）
+    ctx.beginPath();
+    ctx.moveTo(leftX, ROAD_CENTER - 20);
+    ctx.lineTo(pxJia, ROAD_CENTER - 20);
+    ctx.strokeStyle = 'rgba(52,152,219,0.5)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    
+    // 乙的轨迹（从右开始）
+    ctx.beginPath();
+    ctx.moveTo(rightX, ROAD_CENTER + 20);
+    ctx.lineTo(pxYi, ROAD_CENTER + 20);
+    ctx.strokeStyle = 'rgba(142,68,173,0.5)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // 甲
+    ctx.font = '28px sans-serif';
+    ctx.fillText('👦', pxJia, ROAD_CENTER - 20);
+    ctx.fillStyle = '#2980b9';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('甲 ' + Math.round(posJia) + 'm', pxJia, ROAD_CENTER - 55);
+    
+    // 乙
+    ctx.font = '28px sans-serif';
+    ctx.fillText('👧', pxYi, ROAD_CENTER + 20);
+    ctx.fillStyle = '#8e44ad';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('乙 ' + Math.round(TOTAL_DIST - posYi) + 'm', pxYi, ROAD_CENTER + 55);
+}
+
+function render() {
+    ctx.clearRect(0, 0, W, H);
+    drawScene();
+    
+    const posJia = SPEED_JIA * progress * ANIM_DURATION;
+    const posYi = TOTAL_DIST - SPEED_YI * progress * ANIM_DURATION;
+    
+    drawPeople(Math.min(posJia, TOTAL_DIST), Math.max(posYi, 0));
+    
+    const elapsedSec = Math.round(progress * ANIM_DURATION);
+    document.getElementById('timeDisplay').textContent = '经过时间：' + elapsedSec + ' 秒';
+    document.getElementById('timeVal').textContent = elapsedSec;
+    document.getElementById('jiaPos').textContent = Math.round(Math.min(posJia, TOTAL_DIST));
+    document.getElementById('yiPos').textContent = Math.round(Math.max(TOTAL_DIST - posYi, 0));
+    
+    const remaining = TOTAL_DIST - Math.min(posJia, TOTAL_DIST) - Math.max(TOTAL_DIST - posYi, 0);
+    document.getElementById('distVal').textContent = Math.max(0, Math.round(remaining));
+}
+
+function animate(timestamp) {
+    if (!isPlaying) return;
+    
+    progress += (1 / (ANIM_DURATION * 60)) * speedMult;
+    
+    if (progress >= 1) {
+        progress = 1;
+        isPlaying = false;
+        document.getElementById('btnPlay').textContent = '🔄 重放';
+        render();
+        return;
+    }
+    
+    render();
+    animId = requestAnimationFrame(animate);
+}
+
+function togglePlay() {
+    if (progress >= 1) {
+        progress = 0;
+        isPlaying = true;
+        document.getElementById('btnPlay').textContent = '⏸ 暂停';
+        animId = requestAnimationFrame(animate);
+        return;
+    }
+    
+    isPlaying = !isPlaying;
+    document.getElementById('btnPlay').textContent = isPlaying ? '⏸ 暂停' : '▶ 继续';
+    
+    if (isPlaying) {
+        animId = requestAnimationFrame(animate);
+    }
+}
+
+function resetScene() {
+    isPlaying = false;
+    progress = 0;
+    document.getElementById('btnPlay').textContent = '▶ 开始';
+    if (animId) cancelAnimationFrame(animId);
+    render();
+}
+
+function updateSpeed() {
+    speedMult = parseFloat(document.getElementById('speedSlider').value);
+    document.getElementById('speedVal').textContent = speedMult.toFixed(1) + 'x';
+}
+
+// 初始化
+render();
+</script>
+</body>
+</html>
