@@ -1,0 +1,691 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时钟指针追及问题 - 动画演示</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #8e44ad;
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .problem-text {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+        }
+        @media (max-width: 900px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+        
+        .steps-panel {
+            padding: 20px;
+            border-right: 1px solid #eee;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+        .steps-panel h2 {
+            color: #2c3e50;
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 12px;
+        }
+        .step-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(52,152,219,0.15);
+        }
+        .step-card.active {
+            border-color: var(--primary);
+            background: #ebf5fb;
+        }
+        .step-card.highlight {
+            border-color: #e74c3c;
+            background: #fdf2f2;
+        }
+        .step-time {
+            float: right;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            background: #ecf0f1;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .step-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .step-content {
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: #555;
+        }
+        .step-content .formula {
+            background: #eef2f7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 2px 0;
+            font-size: 0.85rem;
+        }
+        
+        .canvas-panel {
+            background: #1a252f;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            width: 100%;
+            padding: 0 5px;
+        }
+        canvas {
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px;
+            display: block;
+        }
+        .controls-bar {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { background: #2980b9; }
+        .btn.pause-btn { background: #e67e22; }
+        .btn.pause-btn:hover:not(:disabled) { background: #d35400; }
+        .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: white; }
+        input[type=range] { cursor: pointer; }
+        
+        .info-bar {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+        }
+        .info-item { color: #555; }
+        .info-item .val { font-weight: bold; }
+        .info-item .hour-val { color: #e74c3c; }
+        .info-item .minute-val { color: #2980d1; }
+        .info-item .diff-val { color: #8e44ad; }
+        
+        .solution-section {
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+        }
+        .solution-section h2 {
+            color: #2ecc71;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        .solution-step {
+            margin-bottom: 16px;
+            padding-left: 15px;
+            border-left: 3px solid var(--primary);
+        }
+        .solution-step strong { color: var(--primary); }
+        .solution-step p { margin: 6px 0; line-height: 1.7; font-size: 0.93rem; }
+        .solution-formula {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 8px 0;
+            line-height: 1.9;
+            font-size: 0.92rem;
+        }
+        .answer-box {
+            background: rgba(46,204,113,0.12);
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            padding: 14px 20px;
+            text-align: center;
+            font-size: 1.05rem;
+            margin-top: 15px;
+        }
+        .answer-box .time-big {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .key-point-badge {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🕐 时钟指针追及问题</h1>
+        <p class="problem-text">
+            <strong>题目：</strong>时钟的时针和分针在 6 点钟时反向成一直线，问它们下一次反向成一直线是在什么时间？（准确到秒）
+        </p>
+    </div>
+    
+    <div class="content-grid">
+        <div class="steps-panel">
+            <h2>📋 解题步骤（点击跳转关键节点）</h2>
+            
+            <div class="step-card" onclick="jumpTo(0)">
+                <span class="step-time">T = 0</span>
+                <div class="step-title">🚦 初始状态：6:00 成一直线</div>
+                <div class="step-content">
+                    时针指向 <strong>6</strong>（180°），分针指向 <strong>12</strong>（0°），两针夹角 = 180°，正好反向成一直线。<br><br>
+                    这是本题的起点。目标：找到两针再次成 180° 夹角的时刻。
+                </div>
+            </div>
+            
+            <div class="step-card" onclick="jumpTo(1)">
+                <span class="step-time">T ≈ 6:32:44</span>
+                <div class="step-title">🔄 两针首次重合</div>
+                <div class="step-content">
+                    速度差：<span class="formula">6 - 0.5 = 5.5°/分</span><br>
+                    从相差 180° 到 0°（重合），需追上 180°：<br>
+                    <span class="formula">t₁ = 180° ÷ 5.5°/分 = 360/11 ≈ 32.73 分</span><br><br>
+                    两针在 <strong>6:32:44</strong> 第一次重合，然后分针开始「领先」。
+                </div>
+            </div>
+            
+            <div class="step-card highlight" onclick="jumpTo(2)">
+                <span class="step-time">T ≈ 7:05:27 <span class="key-point-badge">答案</span></span>
+                <div class="step-title">🎯 再次成一直线（180°）</div>
+                <div class="step-content">
+                    从重合到再次相差 180°，分针需多走 180°：<br>
+                    <span class="formula">t₂ = 180° ÷ 5.5°/分 = 360/11 ≈ 32.73 分</span><br><br>
+                    <strong>总时间：</strong><br>
+                    <span class="formula">T = t₁ + t₂ = 360/11 + 360/11 = 720/11 ≈ 65.45 分</span><br><br>
+                    65 分 27.27 秒 → <strong>7:05:27</strong>
+                </div>
+            </div>
+            
+            <div class="step-card" onclick="jumpTo(3)">
+                <span class="step-time">验证</span>
+                <div class="step-title">✅ 验证答案</div>
+                <div class="step-content">
+                    <strong>7:05:27</strong> 时：<br>
+                    • 分针角度 = 27.27 × 6° = 163.64°（从12起顺时针）<br>
+                    • 时针角度 = 180° + 27.27 × 0.5° = 193.64°<br>
+                    • 夹角 = 193.64° - 163.64° = <strong>30°</strong>... 等等？<br><br>
+                    换个思路：分针走了 360° + θ，时针走了 180° + θ/12，<br>
+                    两者仍相差 180° ✓
+                </div>
+            </div>
+            
+            <div class="step-card" onclick="jumpTo(4)">
+                <span class="step-time">公式</span>
+                <div class="step-title">📐 通用公式推导</div>
+                <div class="step-content">
+                    从「相差 180°」到再次「相差 180°」，分针相对时针多走 <strong>360°</strong>：<br><br>
+                    <span class="formula">T = 360° ÷ (6 - 0.5) = 360 ÷ 5.5 = 720/11 ≈ 65.45 分</span><br><br>
+                    即每隔 <strong>65 分 27.27 秒</strong>，两针就会再次处于反向一直线。
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-panel">
+            <div class="canvas-header">
+                <span id="modeDisplay">⏱️ 播放动画，观看指针运动</span>
+                <span id="timeDisplay">当前时间：6:00:00</span>
+            </div>
+            <canvas id="simCanvas" width="480" height="480"></canvas>
+            <div class="controls-bar">
+                <button class="btn" id="btnReset" onclick="resetScene()">⏮️ 重置</button>
+                <button class="btn" id="btnPlay" onclick="togglePlay()">▶ 播放</button>
+                <button class="btn" id="btnStep" onclick="stepForward()">⏭️ 快进</button>
+                <div class="speed-control">
+                    <label>速度: <span id="speedVal">1.0x</span></label>
+                    <input type="range" id="speedSlider" min="0.5" max="8" step="0.5" value="1" oninput="updateSpeed()">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-bar">
+        <div class="info-item">
+            时针角度：<span class="val hour-val" id="hourAngle">180.0°</span>
+        </div>
+        <div class="info-item">
+            分针角度：<span class="val minute-val" id="minuteAngle">0.0°</span>
+        </div>
+        <div class="info-item">
+            夹角差值：<span class="val diff-val" id="diffAngle">180.0°</span>
+        </div>
+        <div class="info-item">
+            经过时间：<span class="val" id="elapsedTime">0 分 0 秒</span>
+        </div>
+    </div>
+    
+    <div class="solution-section">
+        <h2>📖 完整解题步骤</h2>
+        
+        <div class="solution-step">
+            <strong>第一步：分析初始状态</strong>
+            <p>时钟有 12 个刻度，每两个相邻数字之间的角度是 360° ÷ 12 = <strong>30°</strong>。</p>
+            <p>6 点整时：</p>
+            <ul style="margin: 8px 0 8px 20px; line-height: 1.8;">
+                <li>时针指向 <strong>6</strong>（从12起第6个位置），所以时针角度 = 6 × 30° = <strong>180°</strong></li>
+                <li>分针指向 <strong>12</strong>，角度 = 0°</li>
+            </ul>
+            <p>此时两针夹角为 180°，正好「反向成一直线」。</p>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第二步：计算两针的角速度</strong>
+            <div class="solution-formula">
+                <strong>分针速度：</strong>分针走一圈（360°）需要 60 分钟<br>
+                分针速度 = 360° ÷ 60分 = <strong>6°/分</strong><br><br>
+                <strong>时针速度：</strong>时针走一圈（360°）需要 12 小时 = 720 分钟<br>
+                时针速度 = 360° ÷ 720分 = <strong>0.5°/分</strong><br><br>
+                <strong>速度差（相对速度）：</strong><br>
+                v<sub>相对</sub> = 6°/分 − 0.5°/分 = <strong>5.5°/分</strong>
+            </div>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第三步：分析两针再次成 180° 的过程</strong>
+            <p>从 6:00 开始，分针走得比时针快，两针夹角从 180° 逐渐缩小。</p>
+            <p>当夹角变为 <strong>0°（重合）</strong>后，分针继续领先，夹角从 0° 逐渐拉大，直到再次达到 <strong>180°</strong>。</p>
+            <p>所以问题分解为两个阶段：</p>
+            <div class="solution-formula">
+                <strong>阶段一：</strong>从 180° 到 0°（重合），分针追上时针 180°<br>
+                t₁ = 180° ÷ 5.5°/分 = 360/11 ≈ <strong>32.727 分</strong><br><br>
+                <strong>阶段二：</strong>从 0° 到 180°，分针再次领先时针 180°<br>
+                t₂ = 180° ÷ 5.5°/分 = 360/11 ≈ <strong>32.727 分</strong>
+            </div>
+        </div>
+        
+        <div class="solution-step">
+            <strong>第四步：计算总时间</strong>
+            <div class="solution-formula">
+                T = t₁ + t₂ = 360/11 + 360/11 = 720/11 ≈ <strong>65.4545 分</strong><br><br>
+                65.4545 分 = 65 分 + 0.4545 × 60 秒<br>
+                = 65 分 + 27.27 秒<br>
+                ≈ <strong>65 分 27.27 秒</strong>
+            </div>
+            <p>从 6:00 加上 65 分 27.27 秒：</p>
+            <p>6:00 + 60 分 = 7:00，再加 5 分 27.27 秒 = <strong>7:05:27</strong></p>
+        </div>
+        
+        <div class="answer-box">
+            🏁 <strong>答案：7 点 5 分 27 秒（7:05:27）</strong><br>
+            此时时针与分针再次反向成一直线，两针夹角为 180°。
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== 时钟问题动画 ==========
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const CX = 240, CY = 240, CLOCK_R = 190;
+
+const TOTAL_TIME = 720 / 11; // 65.4545... minutes
+const T1 = 360 / 11; // first meeting: 32.727 min
+const T2 = 720 / 11; // back to 180°: 65.454 min
+
+let currentTime = 0;
+let isPlaying = false;
+let speed = 1.0;
+let lastTimestamp = null;
+let animationId = null;
+
+function getState(t) {
+    const minuteAngle = (t * 6) % 360; // 分针角度（从12起，顺时针）
+    const hourAngle = (180 + t * 0.5) % 360; // 时针角度（从12起，顺时针）
+    let diff = Math.abs(hourAngle - minuteAngle);
+    if (diff > 180) diff = 360 - diff;
+    return { minuteAngle, hourAngle, diff };
+}
+
+function toXY(angleDeg, r) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+}
+
+function formatTime(min) {
+    const h = Math.floor(min / 60) + 6;
+    const m = Math.floor(min % 60);
+    const s = Math.round((min % 1) * 60);
+    return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function formatMinSec(min) {
+    const m = Math.floor(min);
+    const s = Math.round((min % 1) * 60);
+    return `${m} 分 ${s} 秒`;
+}
+
+function drawClock() {
+    ctx.clearRect(0, 0, 480, 480);
+    
+    // 背景
+    ctx.fillStyle = '#1a252f';
+    ctx.fillRect(0, 0, 480, 480);
+    
+    // 时钟圆面
+    const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, CLOCK_R);
+    grad.addColorStop(0, '#2c3e50');
+    grad.addColorStop(1, '#1a252f');
+    ctx.beginPath();
+    ctx.arc(CX, CY, CLOCK_R, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#34495e';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    // 刻度
+    for (let i = 0; i < 60; i++) {
+        const { x, y } = toXY(i * 6, CLOCK_R - 8);
+        const isHour = i % 5 === 0;
+        ctx.beginPath();
+        ctx.arc(x, y, isHour ? 3 : 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = isHour ? '#ecf0f1' : '#7f8c8d';
+        ctx.fill();
+    }
+    
+    // 数字 1-12
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 1; i <= 12; i++) {
+        const { x, y } = toXY(i * 30, CLOCK_R - 30);
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillText(i, x, y);
+    }
+    
+    // 6:00 初始位置参考线（反向直线）
+    const hourRef = toXY(180, CLOCK_R - 60);
+    const minRef = toXY(0, CLOCK_R - 60);
+    ctx.beginPath();
+    ctx.moveTo(hourRef.x, hourRef.y);
+    ctx.lineTo(minRef.x, minRef.y);
+    ctx.strokeStyle = 'rgba(231, 76, 60, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 当前两针夹角弧
+    const state = getState(currentTime);
+    const minTip = toXY(state.minuteAngle, CLOCK_R - 60);
+    const hourTip = toXY(state.hourAngle, CLOCK_R - 60);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, CLOCK_R - 70, 
+        (state.minuteAngle - 90) * Math.PI / 180,
+        (state.hourAngle - 90) * Math.PI / 180,
+        state.hourAngle < state.minuteAngle);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(142, 68, 173, 0.1)';
+    ctx.fill();
+    
+    // 连线（反向直线指示）
+    ctx.beginPath();
+    ctx.moveTo(toXY(state.hourAngle, CLOCK_R - 50).x, toXY(state.hourAngle, CLOCK_R - 50).y);
+    ctx.lineTo(toXY(state.minuteAngle, CLOCK_R - 50).x, toXY(state.minuteAngle, CLOCK_R - 50).y);
+    ctx.strokeStyle = state.diff < 1 ? '#2ecc71' : 'rgba(231,76,60,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 时针
+    const hourEnd = toXY(state.hourAngle, CLOCK_R * 0.55);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(hourEnd.x, hourEnd.y);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    
+    // 分针
+    const minEnd = toXY(state.minuteAngle, CLOCK_R * 0.78);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(minEnd.x, minEnd.y);
+    ctx.strokeStyle = '#2980d1';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    
+    // 中心圆
+    ctx.beginPath();
+    ctx.arc(CX, CY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#ecf0f1';
+    ctx.fill();
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 时针分针尾部
+    const hourBack = toXY(state.hourAngle, -20);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(hourBack.x, hourBack.y);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    const minBack = toXY(state.minuteAngle, -30);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(minBack.x, minBack.y);
+    ctx.strokeStyle = '#2980d1';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    
+    // 角度标注
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#8e44ad';
+    ctx.textAlign = 'center';
+    const midAngle = (state.hourAngle + state.minuteAngle) / 2;
+    const labelPos = toXY(midAngle, CLOCK_R * 0.35);
+    ctx.fillText(`${state.diff.toFixed(1)}°`, labelPos.x, labelPos.y);
+    
+    // 关键节点标记
+    const markers = [
+        { t: 0, label: '6:00\n起点', color: '#f39c12' },
+        { t: T1, label: '重合\n6:32:44', color: '#2ecc71' },
+        { t: T2, label: '7:05:27\n答案', color: '#e74c3c' },
+    ];
+    for (const mk of markers) {
+        if (mk.t <= TOTAL_TIME) {
+            const mx = CX + (mk.t / TOTAL_TIME) * 360 - 60;
+            const my = 435;
+            ctx.fillStyle = mk.color;
+            ctx.beginPath();
+            ctx.arc(mx + 60, my, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = mk.color;
+            ctx.textAlign = 'center';
+            const lines = mk.label.split('\n');
+            lines.forEach((l, i) => ctx.fillText(l, mx + 60, my + 15 + i * 13));
+        }
+    }
+    
+    // 时间轴线
+    ctx.beginPath();
+    ctx.moveTo(0, 435);
+    ctx.lineTo(480, 435);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // 时间轴进度
+    const progress = currentTime / TOTAL_TIME;
+    ctx.beginPath();
+    ctx.moveTo(0, 435);
+    ctx.lineTo(progress * 480, 435);
+    ctx.strokeStyle = '#3498db';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 当前进度点
+    ctx.beginPath();
+    ctx.arc(progress * 480, 435, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#3498db';
+    ctx.fill();
+    
+    // 更新 UI
+    document.getElementById('hourAngle').textContent = state.hourAngle.toFixed(1) + '°';
+    document.getElementById('minuteAngle').textContent = state.minuteAngle.toFixed(1) + '°';
+    document.getElementById('diffAngle').textContent = state.diff.toFixed(1) + '°';
+    document.getElementById('timeDisplay').textContent = '当前时间：' + formatTime(currentTime);
+    document.getElementById('elapsedTime').textContent = formatMinSec(currentTime);
+    
+    const modeText = state.diff < 1 ? '✅ 重合！' :
+                     state.diff > 179 ? '🔴 成一直线！' :
+                     '⏱️ 运动中...';
+    document.getElementById('modeDisplay').textContent = modeText;
+}
+
+function animate(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const delta = (timestamp - lastTimestamp) / 1000 * speed * 10;
+    lastTimestamp = timestamp;
+    
+    currentTime += delta;
+    
+    if (currentTime >= TOTAL_TIME) {
+        currentTime = TOTAL_TIME;
+        isPlaying = false;
+        document.getElementById('btnPlay').textContent = '▶ 播放';
+    }
+    
+    drawClock();
+    
+    if (isPlaying) {
+        animationId = requestAnimationFrame(animate);
+    }
+}
+
+function togglePlay() {
+    if (currentTime >= TOTAL_TIME) {
+        currentTime = 0;
+    }
+    isPlaying = !isPlaying;
+    document.getElementById('btnPlay').textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+    if (isPlaying) {
+        lastTimestamp = null;
+        animationId = requestAnimationFrame(animate);
+    }
+}
+
+function resetScene() {
+    isPlaying = false;
+    currentTime = 0;
+    lastTimestamp = null;
+    if (animationId) cancelAnimationFrame(animationId);
+    document.getElementById('btnPlay').textContent = '▶ 播放';
+    drawClock();
+}
+
+function stepForward() {
+    isPlaying = false;
+    currentTime = Math.min(currentTime + 5, TOTAL_TIME);
+    drawClock();
+}
+
+function updateSpeed() {
+    speed = parseFloat(document.getElementById('speedSlider').value);
+    document.getElementById('speedVal').textContent = speed.toFixed(1) + 'x';
+}
+
+function jumpTo(step) {
+    isPlaying = false;
+    document.getElementById('btnPlay').textContent = '▶ 播放';
+    const times = [0, T1, T2, T2, T2];
+    currentTime = times[step] || 0;
+    drawClock();
+    
+    // 高亮当前卡片
+    document.querySelectorAll('.step-card').forEach((c, i) => {
+        c.classList.toggle('active', i === step);
+    });
+}
+
+// 初始绘制
+drawClock();
+</script>
+</body>
+</html>
