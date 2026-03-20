@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梯形面积问题 - 动画演示</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #8e44ad;
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .problem-text {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+        }
+        @media (max-width: 900px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+        .steps-panel {
+            padding: 20px;
+            border-right: 1px solid #eee;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+        .steps-panel h2 {
+            color: #2c3e50;
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        .step-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(52,152,219,0.1); }
+        .step-card.active { border-color: var(--primary); background: #ebf5fb; }
+        .step-card.given { border-color: #e74c3c; background: #fdf2f2; }
+        .step-card.given.active { background: #fde8e8; }
+        .step-card.concept { border-color: #27ae60; background: #f0fdf4; }
+        .step-card.concept.active { background: #e8f8f0; }
+        .step-title { font-weight: bold; font-size: 0.95em; color: var(--primary); margin-bottom: 8px; }
+        .step-card.given .step-title { color: #e74c3c; }
+        .step-card.concept .step-title { color: #27ae60; }
+        .step-content { font-size: 0.88rem; line-height: 1.6; color: #555; }
+        .formula {
+            background: #f1f2f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 2px 0;
+        }
+        .canvas-panel { background: #1a252f; padding: 20px; }
+        .canvas-header {
+            display: flex; justify-content: space-between; color: white;
+            margin-bottom: 12px; font-size: 0.9rem;
+        }
+        canvas { border-radius: 8px; width: 100%; display: block; }
+        .controls-bar {
+            margin-top: 12px; display: flex; align-items: center;
+            justify-content: space-between; background: rgba(255,255,255,0.08);
+            padding: 10px 15px; border-radius: 8px; color: white;
+        }
+        .btn {
+            background: var(--primary); color: white; border: none;
+            padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 0.88rem;
+        }
+        .btn:disabled { background: #555; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { background: #2980b9; }
+        .btn.calc-btn { background: #8e44ad; }
+        .btn.calc-btn:hover:not(:disabled) { background: #7d3c98; }
+        .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        input[type=range] { cursor: pointer; }
+        .info-bar {
+            padding: 12px 20px; background: #f8f9fa; border-top: 1px solid #eee;
+            display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.88rem;
+        }
+        .info-item { color: #555; }
+        .info-item .val { font-weight: bold; margin-left: 4px; }
+        .solution-section { padding: 20px 30px; border-top: 1px solid #eee; }
+        .solution-section h2 { color: #2ecc71; font-size: 1.05rem; margin-bottom: 15px; }
+        .solution-step { margin-bottom: 14px; padding-left: 14px; border-left: 3px solid var(--primary); }
+        .solution-step strong { color: var(--primary); }
+        .solution-step p { margin: 6px 0; line-height: 1.6; font-size: 0.92rem; }
+        .solution-formula { background: #f8f9fa; padding: 10px 14px; border-radius: 6px; margin: 6px 0; line-height: 1.8; font-size: 0.92rem; }
+        .answer-box {
+            background: rgba(46,204,113,0.12); border: 2px solid #2ecc71;
+            border-radius: 8px; padding: 12px 20px; text-align: center;
+            font-size: 1rem; margin-top: 12px;
+        }
+        .answer-box span { font-size: 1.4rem; font-weight: bold; color: #27ae60; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📐 梯形对角线面积问题 - 动画演示</h1>
+        <p class="problem-text">
+            在梯形 ABCD 中，E 是 AC 的中点，F 是 BD 的中点。<br>
+            对角线 AC 与 BD 相交于点 O。已知 △AOB 面积为 <strong>15</strong>，△COD 面积为 <strong>35</strong>，求梯形 ABCD 的面积。
+        </p>
+    </div>
+    <div class="content-grid">
+        <div class="steps-panel">
+            <h2>📋 解题步骤（点击观看动画）</h2>
+
+            <div class="step-card concept" onclick="jumpToStep(0)">
+                <div class="step-title">① 画图：认识梯形对角线结构</div>
+                <div class="step-content">先画出梯形 ABCD（AB // CD），标出对角线交点 O、四块三角形以及 E、F 中点位置。</div>
+            </div>
+
+            <div class="step-card concept" onclick="jumpToStep(1)">
+                <div class="step-title">② 关键定理：面积比 = 底的比的平方</div>
+                <div class="step-content">相邻两三角形的面积比等于对应底的比的平方，即：<br>
+                <span class="formula">S₁/S₃ = (AB/CD)²</span>，<br>
+                <span class="formula">S₂/S₄ = (CD/AB)²</span></div>
+            </div>
+
+            <div class="step-card given" onclick="jumpToStep(2)">
+                <div class="step-title">③ 代入已知：求上下底之比</div>
+                <div class="step-content">已知 S₁ = 15，S₃ = 35：<br>
+                <span class="formula">AB/CD = √(15/35) = √(3/7)</span></div>
+            </div>
+
+            <div class="step-card concept" onclick="jumpToStep(3)">
+                <div class="step-title">④ 相交弦定理：S₁·S₃ = S₂·S₄</div>
+                <div class="step-content">对角线分出的四块满足：<br>
+                <span class="formula">S₁ × S₃ = S₂ × S₄ = 15 × 35 = 525</span></div>
+            </div>
+
+            <div class="step-card given" onclick="jumpToStep(4)">
+                <div class="step-title">⑤ 联立方程：求中间两块面积</div>
+                <div class="step-content">由 <span class="formula">S₂/S₄ = √(7/3)</span> 和 <span class="formula">S₂·S₄ = 525</span><br>
+                解得：S₂ = <strong>25</strong>，S₄ = <strong>21</strong></div>
+            </div>
+
+            <div class="step-card concept" onclick="jumpToStep(5)">
+                <div class="step-title">⑥ 求总面积</div>
+                <div class="step-content">S = S₁ + S₂ + S₃ + S₄<br>
+                = 15 + 25 + 35 + 21 = <strong>96</strong></div>
+            </div>
+        </div>
+
+        <div class="canvas-panel">
+            <div class="canvas-header">
+                <span id="modeDisplay">当前场景：等待选择...</span>
+                <span id="timeDisplay">动画进度：0%</span>
+            </div>
+            <canvas id="simCanvas" width="700" height="420"></canvas>
+            <div class="controls-bar">
+                <button class="btn" id="btnReset" onclick="resetScene()">⏮ 重置</button>
+                <button class="btn" id="btnPlay" onclick="togglePlay()" disabled>▶ 播放</button>
+                <button class="btn calc-btn" id="btnCalc" onclick="showAllCalc()">📊 一步到位</button>
+                <div class="speed-control">
+                    <label>速度: <span id="speedVal">1.0x</span></label>
+                    <input type="range" id="speedSlider" min="0.25" max="3" step="0.25" value="1" oninput="updateSpeed()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-bar">
+        <div class="info-item">△AOB = <span class="val" id="infoS1" style="color:#e74c3c">—</span></div>
+        <div class="info-item">△BOC = <span class="val" id="infoS2" style="color:#f39c12">—</span></div>
+        <div class="info-item">△COD = <span class="val" id="infoS3" style="color:#27ae60">—</span></div>
+        <div class="info-item">△DOA = <span class="val" id="infoS4" style="color:#3498db">—</span></div>
+        <div class="info-item">总面积 = <span class="val" id="infoTotal" style="color:#8e44ad">—</span></div>
+    </div>
+
+    <div class="solution-section">
+        <h2>📖 完整解题步骤</h2>
+
+        <div class="solution-step">
+            <strong>第一步：认识梯形对角线的面积性质</strong>
+            <p>在梯形 ABCD 中，对角线 AC 与 BD 相交于点 O，梯形被分成四个小三角形：</p>
+            <div class="solution-formula">
+                △AOB（靠近上底 AB）、△BOC（右侧）、△COD（靠近下底 CD）、△DOA（左侧）
+            </div>
+            <p>重要性质：相邻两个三角形的面积比等于对应底的比的平方。</p>
+            <p style="margin-top:8px">即：<span class="formula">S₁/S₃ = (AB/CD)²</span>，<span class="formula">S₂/S₄ = (CD/AB)²</span></p>
+            <p style="margin-top:8px">还有相交弦定理：<span class="formula">S₁ × S₃ = S₂ × S₄</span></p>
+        </div>
+
+        <div class="solution-step">
+            <strong>第二步：利用已知求上下底之比</strong>
+            <p>已知 S₁ = 15，S₃ = 35：</p>
+            <div class="solution-formula">
+                AB/CD = √(S₁/S₃) = √(15/35) = √(3/7)
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第三步：由相交弦定理建立方程</strong>
+            <p>不相邻的两个三角形面积满足：</p>
+            <div class="solution-formula">
+                S₁ × S₃ = S₂ × S₄<br>
+                15 × 35 = S₂ × S₄<br>
+                S₂ × S₄ = <strong>525</strong>
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第四步：联立方程求解中间两块面积</strong>
+            <p>由相邻面积比：</p>
+            <div class="solution-formula">
+                S₂/S₄ = (CD/AB)² = 7/3 &nbsp;（即 CD/AB = √(7/3)）<br><br>
+                设 S₂ = x，则 S₄ = 525/x<br>
+                x / (525/x) = 7/3 &nbsp;→&nbsp; x² = 525 × 7/3 = 1225<br>
+                x = 35（取正值）&nbsp;→&nbsp; S₂ = <strong>35</strong> × 3/7 = <strong>25</strong><br>
+                S₄ = 525 / 25 = <strong>21</strong>
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第五步：求总面积</strong>
+            <div class="solution-formula">
+                S = S₁ + S₂ + S₃ + S₄<br>
+                = 15 + 25 + 35 + 21 = <strong style="color:#27ae60;font-size:1.1em">96</strong>
+            </div>
+        </div>
+
+        <div class="answer-box">
+            ✅ 梯形 ABCD 的面积 = <span>96</span>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============ 画布全局变量 ============
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// 梯形顶点（可调）
+let A, B, C, D, O;
+let E_pos, F_pos; // 中点（E在AC上，F在BD上）
+
+// 动画变量
+let animRunning = false;
+let animProgress = 0; // 0~1
+let animSpeed = 1;
+let animId = null;
+let lastTime = null;
+let currentStep = -1;
+
+// 面积数据
+const S1 = 15, S3 = 35;
+const ratio = Math.sqrt(3/7); // AB/CD
+const S2 = 25, S4 = 21;
+const STotal = 96;
+
+// ============ 初始化梯形坐标 ============
+function initCoords() {
+    // 梯形：AB为上底（短），CD为下底（长），AB // CD
+    // 设 AB = 2（短），CD = 2/ratio = 2/√(3/7) = 2√(7/3)
+    // 方便取整数比例：AB : CD = √3 : √7
+    // 设 AB = 2√3 ≈ 3.46, CD = 2√7 ≈ 5.29
+    // 取整数近似：AB = 6, CD = 2√7/√3 × 6... 算了直接用比例画
+
+    const cx = W / 2;
+    const cy = H / 2;
+    const AB = 160, CD = 160 / ratio; // AB/CD = √(3/7)
+    const h = 180; // 梯形高
+
+    A = { x: cx - AB/2, y: cy - h/2 };
+    B = { x: cx + AB/2, y: cy - h/2 };
+    D = { x: cx - CD/2, y: cy + h/2 };
+    C = { x: cx + CD/2, y: cy + h/2 };
+
+    // 对角线交点 O（用参数比例计算）
+    // AC: A + t*(C-A), BD: B + s*(D-B), 求交点
+    // 设 t = λ, s = μ
+    // A + λ(C-A) = B + μ(D-B)
+    // λ(Cx-Ax) - μ(Dx-Bx) = Bx - Ax
+    // λ(Cy-Ay) - μ(Dy-By) = By - Ay
+    const denom = (C.x-A.x)*(D.y-B.y) - (C.y-A.y)*(D.x-B.x);
+    const t = ((B.x-A.x)*(D.y-B.y) - (B.y-A.y)*(D.x-B.x)) / denom;
+
+    O = {
+        x: A.x + t * (C.x - A.x),
+        y: A.y + t * (C.y - A.y)
+    };
+
+    // 中点
+    E_pos = { x: (A.x + C.x) / 2, y: (A.y + C.y) / 2 };
+    F_pos = { x: (B.x + D.x) / 2, y: (B.y + D.y) / 2 };
+}
+
+// ============ 颜色定义 ============
+const COL = {
+    s1: '#e74c3c',  // △AOB 红
+    s2: '#f39c12',  // △BOC 橙
+    s3: '#27ae60',  // △COD 绿
+    s4: '#3498db',  // △BOC 蓝
+    diag: '#2c3e50',
+    text: '#ffffff',
+    label: '#f1c40f',
+    bg: '#d0e8f5'
+};
+
+// ============ 绘制函数 ============
+function drawBG() {
+    // 渐变背景
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#d0e8f5');
+    grad.addColorStop(1, '#a8d8ea');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+}
+
+function polygon(points, fillColor, strokeColor, lineW) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.closePath();
+    if (fillColor) { ctx.fillStyle = fillColor; ctx.fill(); }
+    if (strokeColor) { ctx.strokeStyle = strokeColor; ctx.lineWidth = lineW || 2; ctx.stroke(); }
+}
+
+function triangleAreaText(p1, p2, p3, text, color, offsetX, offsetY) {
+    polygon([p1, p2, p3], color + '55', color, 2);
+    const cx = (p1.x + p2.x + p3.x) / 3 + (offsetX || 0);
+    const cy = (p1.y + p2.y + p3.y) / 3 + (offsetY || 0);
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, cy);
+}
+
+function drawTrapezoid(step) {
+    // 背景
+    drawBG();
+
+    // 填充四边形（分步显现）
+    // Step 0: 只画边框
+    // Step 1: 显示定理
+    // Step 2+: 依次填入面积
+
+    const showTri1 = step >= 2;
+    const showTri2 = step >= 4;
+    const showTri3 = step >= 2;
+    const showTri4 = step >= 5;
+
+    // △AOB
+    if (showTri1) triangleAreaText(A, B, O, 'S₁=15', COL.s1, 0, -10);
+    // △COD
+    if (showTri3) triangleAreaText(C, D, O, 'S₃=35', COL.s3, 0, 10);
+    // △BOC
+    if (showTri2) triangleAreaText(B, C, O, 'S₂=25', COL.s2, 10, 0);
+    // △DOA
+    if (showTri4) triangleAreaText(D, A, O, 'S₄=21', COL.s4, -10, 0);
+
+    // 梯形边框
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+    ctx.lineTo(C.x, C.y); ctx.lineTo(D.x, D.y);
+    ctx.closePath();
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // 对角线（分步画）
+    if (step >= 1) {
+        ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(C.x, C.y);
+        ctx.strokeStyle = COL.diag; ctx.lineWidth = 2; ctx.stroke();
+
+        ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(D.x, D.y);
+        ctx.strokeStyle = COL.diag; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // 顶点标签
+    const labels = [['A', A.x - 15, A.y - 12], ['B', B.x + 12, B.y - 12],
+                    ['C', C.x + 12, C.y + 12], ['D', D.x - 15, D.y + 12]];
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = '#2c3e50';
+    labels.forEach(([l, x, y]) => {
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(l, x, y);
+    });
+
+    // O点
+    if (step >= 1) {
+        ctx.beginPath(); ctx.arc(O.x, O.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#2c3e50'; ctx.fill();
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('O', O.x + 10, O.y - 8);
+    }
+
+    // E, F 中点
+    if (step >= 1) {
+        ctx.beginPath(); ctx.arc(E_pos.x, E_pos.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#8e44ad'; ctx.fill();
+        ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#8e44ad';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('E', E_pos.x + 10, E_pos.y - 6);
+
+        ctx.beginPath(); ctx.arc(F_pos.x, F_pos.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#8e44ad'; ctx.fill();
+        ctx.fillText('F', F_pos.x + 10, F_pos.y - 6);
+    }
+
+    // 画箭头标注上下底
+    if (step >= 1) {
+        ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+        // AB 上底标注
+        const midAB = { x: (A.x+B.x)/2, y: (A.y+B.y)/2 };
+        ctx.beginPath(); ctx.moveTo(midAB.x, midAB.y - 25); ctx.lineTo(midAB.x, midAB.y - 10);
+        ctx.stroke();
+        ctx.fillStyle = '#555'; ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText('AB (上底)', midAB.x, midAB.y - 26);
+
+        // CD 下底标注
+        const midCD = { x: (C.x+D.x)/2, y: (C.y+D.y)/2 };
+        ctx.beginPath(); ctx.moveTo(midCD.x, midCD.y + 25); ctx.lineTo(midCD.x, midCD.y + 10);
+        ctx.stroke();
+        ctx.fillText('CD (下底)', midCD.x, midCD.y + 36);
+    }
+}
+
+function drawTheorem(step) {
+    if (step < 1) return;
+    // 在右侧显示定理公式
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    roundRect(ctx, W - 220, 20, 200, 80, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('关键定理', 30, 28);
+    ctx.font = '12px sans-serif';
+    ctx.fillText('S₁/S₃ = (AB/CD)²', 30, 46);
+    ctx.fillText('S₁·S₃ = S₂·S₄', 30, 64);
+}
+
+function drawAnswer(step) {
+    if (step < 5) return;
+    ctx.fillStyle = 'rgba(46,204,113,0.15)';
+    roundRect(ctx, W/2 - 120, H - 70, 240, 50, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#2ecc71';
+    ctx.lineWidth = 2;
+    roundRect(ctx, W/2 - 120, H - 70, 240, 50, 10);
+    ctx.stroke();
+    ctx.fillStyle = '#27ae60';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('梯形面积 = 96', W/2, H - 45);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+    ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+    ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+    ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+    ctx.closePath();
+}
+
+function updateInfoBar(step) {
+    document.getElementById('infoS1').textContent = step >= 2 ? '15' : '—';
+    document.getElementById('infoS3').textContent = step >= 2 ? '35' : '—';
+    document.getElementById('infoS2').textContent = step >= 4 ? '25' : '—';
+    document.getElementById('infoS4').textContent = step >= 5 ? '21' : '—';
+    document.getElementById('infoTotal').textContent = step >= 5 ? '96' : '—';
+}
+
+// ============ 场景步骤定义 ============
+const STEPS = [
+    { label: '① 画图：梯形对角线结构', time: 2.5 },
+    { label: '② 关键定理：面积比=底的比的平方', time: 3.5 },
+    { label: '③ 代入已知：求上下底之比', time: 2.5 },
+    { label: '④ 相交弦定理', time: 2.5 },
+    { label: '⑤ 联立方程求S₂和S₄', time: 3.5 },
+    { label: '⑥ 求总面积', time: 2.5 }
+];
+
+// ============ 动画控制 ============
+function togglePlay() {
+    if (animRunning) { pauseAnim(); }
+    else { startAnim(); }
+}
+
+function startAnim() {
+    animRunning = true;
+    document.getElementById('btnPlay').textContent = '⏸ 暂停';
+    lastTime = null;
+    animId = requestAnimationFrame(animLoop);
+}
+
+function pauseAnim() {
+    animRunning = false;
+    document.getElementById('btnPlay').textContent = '▶ 播放';
+    if (animId) cancelAnimationFrame(animId);
+}
+
+function resetScene() {
+    pauseAnim();
+    animProgress = 0;
+    currentStep = -1;
+    document.getElementById('btnPlay').disabled = false;
+    document.getElementById('modeDisplay').textContent = '当前场景：等待选择...';
+    document.getElementById('timeDisplay').textContent = '动画进度：0%';
+    updateInfoBar(-1);
+    initCoords();
+    drawScene(0);
+}
+
+let totalDuration = 0;
+STEPS.forEach(s => totalDuration += s.time);
+
+function animLoop(timestamp) {
+    if (!animRunning) return;
+    if (!lastTime) lastTime = timestamp;
+    const dt = (timestamp - lastTime) * animSpeed;
+    lastTime = timestamp;
+
+    animProgress += dt / 1000;
+    if (animProgress > totalDuration) {
+        animProgress = totalDuration;
+        pauseAnim();
+    }
+
+    // 根据进度计算当前 step
+    let elapsed = 0, step = -1;
+    for (let i = 0; i < STEPS.length; i++) {
+        elapsed += STEPS[i].time;
+        if (animProgress < elapsed) { step = i; break; }
+        step = i;
+    }
+    currentStep = step;
+
+    document.getElementById('timeDisplay').textContent = `动画进度：${Math.round(animProgress / totalDuration * 100)}%`;
+    document.getElementById('modeDisplay').textContent = STEPS[step] ? STEPS[step].label : '完成！';
+    updateInfoBar(step);
+    drawScene(step);
+
+    if (animProgress < totalDuration) {
+        animId = requestAnimationFrame(animLoop);
+    } else {
+        pauseAnim();
+        document.getElementById('modeDisplay').textContent = '动画完成！';
+    }
+}
+
+function drawScene(step) {
+    drawTrapezoid(step);
+    drawTheorem(step);
+    drawAnswer(step);
+}
+
+function jumpToStep(stepIdx) {
+    // 计算该步骤的起始时间
+    let targetTime = 0;
+    for (let i = 0; i < stepIdx; i++) targetTime += STEPS[i].time;
+    animProgress = targetTime;
+    currentStep = stepIdx;
+    updateInfoBar(stepIdx);
+    drawScene(stepIdx);
+    document.getElementById('modeDisplay').textContent = STEPS[stepIdx].label;
+    document.getElementById('timeDisplay').textContent = `动画进度：${Math.round(targetTime / totalDuration * 100)}%`;
+    document.getElementById('btnPlay').disabled = false;
+    if (animRunning) pauseAnim();
+}
+
+function showAllCalc() {
+    animProgress = totalDuration;
+    currentStep = STEPS.length - 1;
+    updateInfoBar(STEPS.length - 1);
+    drawScene(STEPS.length - 1);
+    document.getElementById('modeDisplay').textContent = '完整解答';
+    document.getElementById('timeDisplay').textContent = '动画进度：100%';
+    document.getElementById('btnPlay').disabled = false;
+    if (animRunning) pauseAnim();
+}
+
+function updateSpeed() {
+    const slider = document.getElementById('speedSlider');
+    animSpeed = parseFloat(slider.value);
+    document.getElementById('speedVal').textContent = animSpeed.toFixed(2) + 'x';
+}
+
+// ============ 初始化 ============
+initCoords();
+drawScene(0);
+document.getElementById('btnPlay').disabled = false;
+
+// 高亮激活卡片
+function setActiveCard(idx) {
+    document.querySelectorAll('.step-card').forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+    });
+}
+</script>
+</body>
+</html>
