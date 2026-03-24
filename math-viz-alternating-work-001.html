@@ -1,0 +1,789 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交替工作问题 - 工程动画演示</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #8e44ad;
+            --jia-color: #e74c3c;
+            --yi-color: #2ecc71;
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .problem-text {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.8fr;
+        }
+        @media (max-width: 900px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* 左侧：步骤面板 */
+        .steps-panel {
+            padding: 20px;
+            border-right: 1px solid #eee;
+            max-height: 580px;
+            overflow-y: auto;
+        }
+        .steps-panel h2 {
+            color: #2c3e50;
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        .step-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(52,152,219,0.15);
+        }
+        .step-card.active {
+            border-color: var(--primary);
+            background: #ebf5fb;
+        }
+        .step-card.current-worker-jia {
+            border-color: var(--jia-color);
+            background: #fdf2f2;
+        }
+        .step-card.current-worker-yi {
+            border-color: var(--yi-color);
+            background: #f2fdf5;
+        }
+        .step-title {
+            font-weight: bold;
+            font-size: 0.95em;
+            margin-bottom: 6px;
+        }
+        .step-card.current-worker-jia .step-title { color: var(--jia-color); }
+        .step-card.current-worker-yi .step-title { color: var(--yi-color); }
+        .step-card:not(.current-worker-jia):not(.current-worker-yi) .step-title { color: var(--primary); }
+        .step-content {
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: #555;
+        }
+        .formula {
+            background: #f1f2f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 2px 0;
+            font-size: 0.85em;
+        }
+        
+        /* 右侧：画布面板 */
+        .canvas-panel {
+            background: #1a252f;
+            padding: 20px;
+        }
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+        canvas {
+            border-radius: 8px;
+            width: 100%;
+            display: block;
+        }
+        .controls-bar {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.08);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: background 0.2s;
+        }
+        .btn:disabled { background: #4a6278; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { background: #2980b9; }
+        .btn-jia { background: var(--jia-color); }
+        .btn-jia:hover:not(:disabled) { background: #c0392b; }
+        .btn-yi { background: var(--yi-color); }
+        .btn-yi:hover:not(:disabled) { background: #27ae60; }
+        .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        input[type=range] { cursor: pointer; }
+        
+        /* 底部信息条 */
+        .info-bar {
+            padding: 14px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.88rem;
+        }
+        .info-item { color: #555; }
+        .info-item .val { font-weight: bold; }
+        .info-item.jia .val { color: var(--jia-color); }
+        .info-item.yi .val { color: var(--yi-color); }
+        .info-item.total .val { color: var(--primary); }
+        
+        /* 解答区域 */
+        .solution-section {
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+        }
+        .solution-section h2 {
+            color: #2ecc71;
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+        }
+        .solution-step {
+            margin-bottom: 14px;
+            padding-left: 14px;
+            border-left: 3px solid var(--primary);
+        }
+        .solution-step strong { color: var(--primary); }
+        .solution-step p { margin: 6px 0; line-height: 1.6; font-size: 0.92rem; }
+        .solution-formula {
+            background: #f8f9fa;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin: 6px 0;
+            line-height: 1.9;
+            font-size: 0.9rem;
+        }
+        .answer-box {
+            background: rgba(46,204,113,0.12);
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            padding: 14px 20px;
+            text-align: center;
+            font-size: 1rem;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔧 交替工作问题 - 工程动画演示</h1>
+        <p class="problem-text">
+            <strong>题目：</strong>一项工程，甲单独做要 24 小时完成，乙单独做要 18 小时完成。
+            若甲先做 1 小时，然后乙接替甲做 1 小时，再由甲接替乙做 1 小时……如此交替工作，
+            那么完成任务时，共用了多少小时？
+        </p>
+    </div>
+    
+    <div class="content-grid">
+        <div class="steps-panel">
+            <h2>📋 解题步骤（点击跳转到该时刻）</h2>
+            
+            <div class="step-card active" onclick="jumpTo(0)">
+                <div class="step-title">第1步：求各自效率</div>
+                <div class="step-content">
+                    <p>甲的效率 = 1 ÷ 24 = <span class="formula">1/24</span>（每小时完成的工作量）</p>
+                    <p>乙的效率 = 1 ÷ 18 = <span class="formula">1/18</span></p>
+                    <p>每2小时（一个周期）完成：1/24 + 1/18 = <span class="formula">7/72</span></p>
+                </div>
+            </div>
+
+            <div class="step-card" onclick="jumpTo(2)">
+                <div class="step-title">第2步：计算完整周期数</div>
+                <div class="step-content">
+                    <p>10个周期（20小时）完成：</p>
+                    <p>10 × 7/72 = <span class="formula">70/72 = 35/36</span></p>
+                    <p>剩余工作量 = 1 - 35/36 = <span class="formula">1/36</span></p>
+                </div>
+            </div>
+
+            <div class="step-card" onclick="jumpTo(20)">
+                <div class="step-title">第3步：甲接手最后的 1/36</div>
+                <div class="step-content">
+                    <p>第21小时由甲来做</p>
+                    <p>需要时间 = (1/36) ÷ (1/24) = <span class="formula">24/36 = 2/3 小时 = 40分钟</span></p>
+                </div>
+            </div>
+
+            <div class="step-card" onclick="jumpTo(20.667)">
+                <div class="step-title">✅ 答案</div>
+                <div class="step-content">
+                    <p><strong>总时间 = 20 + 2/3 = 20.667 小时</strong></p>
+                    <p>= <strong>20 小时 40 分钟</strong></p>
+                    <p style="color:#888;margin-top:4px">提示：关键点在于把"交替"理解为<em>周期性的分段工作</em>，而非简单的效率叠加。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-panel">
+            <div class="canvas-header">
+                <span id="modeDisplay">🏗️ 等待开始...</span>
+                <span id="timeDisplay">经过时间：0.00 小时</span>
+            </div>
+            <canvas id="simCanvas" width="700" height="380"></canvas>
+            <div class="controls-bar">
+                <button class="btn" id="btnReset" onclick="resetScene()">⏮️ 重置</button>
+                <button class="btn" id="btnPlay" onclick="togglePlay()">▶ 播放</button>
+                <button class="btn btn-jia" id="btnJia" onclick="speedUpJia()" title="甲加速">🐇 甲+</button>
+                <button class="btn btn-yi" id="btnYi" onclick="speedUpYi()" title="乙加速">🐢 乙+</button>
+                <div class="speed-control">
+                    <label>速度: <span id="speedVal">1.0x</span></label>
+                    <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1" oninput="updateSpeed()">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-bar">
+        <div class="info-item jia">🐇 <strong>甲</strong> 完成：<span class="val" id="jiaDone">0.000</span></div>
+        <div class="info-item yi">🐢 <strong>乙</strong> 完成：<span class="val" id="yiDone">0.000</span></div>
+        <div class="info-item total">📦 <strong>总计</strong>：<span class="val" id="totalDone">0.000</span> / 1.000</div>
+        <div class="info-item">⏱️ <strong>当前小时</strong>：<span class="val" id="currentHour">0.00</span></div>
+    </div>
+    
+    <div class="solution-section">
+        <h2>📖 完整解题步骤</h2>
+        
+        <div class="solution-step">
+            <strong>第一步：理解题意，求工作效率</strong>
+            <p>工程总量设为 1（整个工程）。</p>
+            <div class="solution-formula">
+                甲单独完成需要 24 小时 → 甲的工作效率 = 1 ÷ 24 = <strong>1/24</strong>（每小时完成工程的比例）<br>
+                乙单独完成需要 18 小时 → 乙的工作效率 = 1 ÷ 18 = <strong>1/18</strong>
+            </div>
+            <p>注意：效率指单位时间内完成的工作量（占总工程的比例）。</p>
+        </div>
+
+        <div class="solution-step">
+            <strong>第二步：分析交替工作的周期</strong>
+            <p>交替规律是：甲做1小时 → 乙做1小时 → 甲做1小时 → 乙做1小时 → ……</p>
+            <p>每 <strong>2小时</strong> 为一个完整周期，每个周期内两人各做1小时。</p>
+            <div class="solution-formula">
+                一个周期（2小时）完成的工作量：<br>
+                = 甲1小时完成 + 乙1小时完成<br>
+                = 1/24 + 1/18<br>
+                = (3/72 + 4/72)<br>
+                = <strong>7/72</strong>
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第三步：计算完整周期能完成多少</strong>
+            <p>计算需要多少个完整周期：</p>
+            <div class="solution-formula">
+                1 ÷ (7/72) = 72/7 ≈ 10.29 个周期<br><br>
+                10个完整周期（20小时）完成：10 × 7/72 = 70/72 = <strong>35/36</strong><br>
+                剩余工作量 = 1 - 35/36 = <strong>1/36</strong>
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第四步：处理最后剩余的 1/36</strong>
+            <p>10个周期后用时20小时，剩余1/36的工作量。</p>
+            <p>第21小时轮到<strong>甲</strong>来做，他每小时做1/24。</p>
+            <div class="solution-formula">
+                甲完成剩余1/36需要的时间：<br>
+                = (1/36) ÷ (1/24)<br>
+                = 24/36<br>
+                = <strong>2/3 小时 = 40 分钟</strong>
+            </div>
+        </div>
+
+        <div class="solution-step">
+            <strong>第五步：汇总总时间</strong>
+            <div class="solution-formula">
+                总时间 = 20小时（10个完整周期）+ 2/3小时（甲最后一段）<br>
+                = 20 + 2/3 = <strong>62/3 小时 ≈ 20.667 小时</strong><br>
+                = <strong>20 小时 40 分钟</strong>
+            </div>
+        </div>
+
+        <div class="answer-box">
+            🎯 <strong>答：完成任务共用了 20 小时 40 分钟。</strong>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============ 动画核心逻辑 ============
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// 参数
+const JIA_RATE = 1/24;
+const YI_RATE = 1/18;
+const PERIOD = 2; // 2小时一个完整周期（甲1h + 乙1h）
+const TOTAL_WORK = 1;
+const CYCLE_WORK = JIA_RATE + YI_RATE; // 7/72
+
+// 动画状态
+let currentTime = 0; // 当前模拟时间（小时）
+let isPlaying = false;
+let speed = 1.0;
+let lastTimestamp = null;
+let rafId = null;
+let animationFinished = false;
+
+// ============ 绘制函数 ============
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+    
+    // 背景渐变（天空）
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+    skyGrad.addColorStop(0, '#1a252f');
+    skyGrad.addColorStop(1, '#2c3e50');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+    
+    // 地面
+    const groundY = H * 0.55;
+    ctx.fillStyle = '#27ae60';
+    ctx.fillRect(0, groundY, W, H - groundY);
+    
+    // 进度条背景
+    const barX = 50, barY = 30, barW = W - 100, barH = 28;
+    ctx.fillStyle = '#1a252f';
+    ctx.strokeStyle = '#34495e';
+    ctx.lineWidth = 2;
+    roundRect(ctx, barX, barY, barW, barH, 6);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 进度条（总进度）
+    const totalProgress = Math.min(currentTime > 0 ? (getTotalWork(currentTime) / TOTAL_WORK) : 0, 1);
+    if (totalProgress > 0) {
+        const progW = barW * totalProgress;
+        const progGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        progGrad.addColorStop(0, '#3498db');
+        progGrad.addColorStop(1, '#2ecc71');
+        ctx.fillStyle = progGrad;
+        roundRect(ctx, barX, barY, progW, barH, 6);
+        ctx.fill();
+    }
+    
+    // 进度文字
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${(totalProgress * 100).toFixed(1)}%  (${getTotalWork(currentTime).toFixed(4)} / 1)`, W/2, barY + barH/2 + 5);
+    
+    // 时间刻度
+    const ticks = [0, 4, 8, 12, 16, 20, 20.667];
+    ctx.fillStyle = '#7f8c8d';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    for (const t of ticks) {
+        const x = barX + (t / 21) * barW;
+        if (x > barX && x < barX + barW) {
+            ctx.fillText(t + 'h', x, barY + barH + 14);
+            ctx.beginPath();
+            ctx.moveTo(x, barY + barH);
+            ctx.lineTo(x, barY + barH + 4);
+            ctx.strokeStyle = '#7f8c8d';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }
+    // 20h40min 特殊标记
+    const x20 = barX + (20.667 / 21) * barW;
+    ctx.fillStyle = '#f39c12';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('20h40min', x20, barY + barH + 28);
+    ctx.beginPath();
+    ctx.moveTo(x20, barY + barH);
+    ctx.lineTo(x20, barY + barH + 10);
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 确定当前谁在做
+    const currentWorker = getCurrentWorker(currentTime);
+    const workerY = H * 0.4;
+    const jiaX = W * 0.28;
+    const yiX = W * 0.72;
+    
+    // ===== 工人状态 =====
+    const isJiaWorking = currentWorker === 'jia';
+    const isYiWorking = currentWorker === 'yi';
+    
+    // 甲
+    const jiaScale = isJiaWorking ? 1.0 : 0.82;
+    drawWorker(ctx, jiaX, workerY, jiaScale, isJiaWorking, '甲', '#e74c3c', '#c0392b');
+    
+    // 乙
+    const yiScale = isYiWorking ? 1.0 : 0.82;
+    drawWorker(ctx, yiX, workerY, yiScale, isYiWorking, '乙', '#2ecc71', '#27ae60');
+    
+    // 中间箭头
+    if (isJiaWorking || isYiWorking) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#f39c12';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        const arrowX = isJiaWorking ? jiaX + 80 : yiX - 80;
+        ctx.fillText('→', arrowX, workerY + 5);
+        ctx.restore();
+    }
+    
+    // 底部时间轴
+    const axisY = H - 55;
+    drawTimeline(ctx, axisY);
+    
+    // 当前时间指示器
+    if (currentTime > 0) {
+        const indicatorX = 50 + (currentTime / 21) * (W - 100);
+        ctx.beginPath();
+        ctx.moveTo(indicatorX, axisY - 8);
+        ctx.lineTo(indicatorX - 6, axisY - 16);
+        ctx.lineTo(indicatorX + 6, axisY - 16);
+        ctx.closePath();
+        ctx.fillStyle = '#f39c12';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(indicatorX, axisY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#f39c12';
+        ctx.fill();
+    }
+    
+    // 完成标记
+    if (animationFinished || totalProgress >= 1) {
+        ctx.fillStyle = 'rgba(46,204,113,0.9)';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✅ 完成！', W/2, H/2 - 20);
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillText('总用时：20 小时 40 分钟', W/2, H/2 + 10);
+    }
+}
+
+function drawWorker(ctx, x, y, scale, isWorking, name, color, darkColor) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    
+    // 身体
+    const bobY = isWorking ? Math.sin(Date.now() / 150) * 3 : 0;
+    ctx.beginPath();
+    ctx.arc(0, bobY, 28, 0, Math.PI * 2);
+    const bodyGrad = ctx.createRadialGradient(-8, -8, 2, 0, 0, 28);
+    bodyGrad.addColorStop(0, color);
+    bodyGrad.addColorStop(1, darkColor);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+    ctx.strokeStyle = darkColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 眼睛
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(-8, bobY - 6, 7, 0, Math.PI * 2);
+    ctx.arc(8, bobY - 6, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2c3e50';
+    ctx.beginPath();
+    ctx.arc(-8, bobY - 5, 4, 0, Math.PI * 2);
+    ctx.arc(8, bobY - 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 名字
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, 0, bobY + 48);
+    
+    // 工作状态标签
+    if (isWorking) {
+        ctx.fillStyle = color;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('工作中...', 0, bobY - 42);
+        // 上方锤子/工具动画
+        const toolX = name === '甲' ? 25 : -25;
+        const toolY = bobY - 20 + Math.sin(Date.now() / 100) * 8;
+        ctx.fillStyle = '#95a5a6';
+        ctx.beginPath();
+        ctx.roundRect(toolX - 4, toolY - 15, 8, 20, 2);
+        ctx.fill();
+        ctx.fillStyle = '#7f8c8d';
+        ctx.beginPath();
+        ctx.roundRect(toolX - 8, toolY + 3, 16, 10, 2);
+        ctx.fill();
+    } else {
+        ctx.fillStyle = '#7f8c8d';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('等待中', 0, bobY - 42);
+    }
+    
+    ctx.restore();
+}
+
+function drawTimeline(ctx, axisY) {
+    const axisX = 50, axisW = W - 100;
+    
+    // 底线
+    ctx.beginPath();
+    ctx.moveTo(axisX, axisY);
+    ctx.lineTo(axisX + axisW, axisY);
+    ctx.strokeStyle = '#4a6278';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 刻度 + 周期标签
+    for (let h = 0; h <= 20; h += 2) {
+        const x = axisX + (h / 21) * axisW;
+        ctx.beginPath();
+        ctx.moveTo(x, axisY);
+        ctx.lineTo(x, axisY + 8);
+        ctx.strokeStyle = '#4a6278';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        
+        // 周期标签
+        ctx.fillStyle = '#7f8c8d';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h + 'h', x, axisY + 20);
+        
+        // 周期编号
+        const cycle = h / 2;
+        if (cycle > 0) {
+            ctx.fillStyle = cycle % 2 === 1 ? '#e74c3c' : '#2ecc71';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText('周' + cycle, x, axisY + 32);
+        }
+    }
+    
+    // 图例
+    ctx.fillStyle = '#e74c3c';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillRect(axisX, axisY + 40, 12, 12);
+    ctx.fillStyle = 'white';
+    ctx.fillText('甲工作时段', axisX + 16, axisY + 50);
+    
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(axisX + 100, axisY + 40, 12, 12);
+    ctx.fillStyle = 'white';
+    ctx.fillText('乙工作时段', axisX + 116, axisY + 50);
+}
+
+// ============ 动画逻辑 ============
+function getCurrentWorker(t) {
+    if (t <= 0) return 'idle';
+    const hour = t % 2;
+    const periodNum = Math.floor(t / 2);
+    // 偶数周期（0-based）: 0,2,4,... → 甲先做 (hour 0-1 is jia, 1-2 is yi)
+    // 奇数周期: 乙先做
+    // 实际上交替规律是固定的：每个周期内先甲后乙
+    // t ∈ [0,1): 甲, [1,2): 乙, [2,3): 甲, [3,4): 乙...
+    const fullHours = Math.floor(t);
+    if (fullHours % 2 === 0) return 'jia';
+    else return 'yi';
+}
+
+function getHourInPeriod(t) {
+    return t % 2;
+}
+
+function getTotalWork(t) {
+    if (t <= 0) return 0;
+    const fullCycles = Math.floor(t / 2);
+    let work = fullCycles * CYCLE_WORK;
+    const remaining = t - fullCycles * 2;
+    
+    if (remaining > 0) {
+        const fullHours = Math.floor(remaining);
+        // 每个整小时
+        for (let h = 0; h < fullHours; h++) {
+            const isJia = (fullCycles * 2 + h) % 2 === 0;
+            work += isJia ? JIA_RATE : YI_RATE;
+        }
+        // 最后一个不满的小时（用于最后甲只做2/3小时的情况）
+        const hourFraction = remaining - fullHours;
+        if (hourFraction > 0) {
+            const isJia = (fullCycles * 2 + fullHours) % 2 === 0;
+            work += hourFraction * (isJia ? JIA_RATE : YI_RATE);
+        }
+    }
+    return Math.min(work, TOTAL_WORK);
+}
+
+function getJiaWork(t) {
+    if (t <= 0) return 0;
+    let work = 0;
+    const totalHours = Math.floor(t);
+    for (let h = 0; h < totalHours; h++) {
+        if (h % 2 === 0) work += JIA_RATE;
+        else work += YI_RATE;
+    }
+    const frac = t - totalHours;
+    if (frac > 0) {
+        if (totalHours % 2 === 0) work += frac * JIA_RATE;
+        else work += frac * YI_RATE;
+    }
+    return Math.min(work, TOTAL_WORK);
+}
+
+function getYiWork(t) {
+    return Math.max(0, getTotalWork(t) - getJiaWork(t));
+}
+
+function animate(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const delta = (timestamp - lastTimestamp) / 1000; // 转为秒
+    lastTimestamp = timestamp;
+    
+    const dt = delta * speed * 0.5; // 0.5x real-time (1 sim second = 2 real seconds at 1x)
+    currentTime += dt;
+    
+    if (currentTime >= 20.667) {
+        currentTime = 20.667;
+        animationFinished = true;
+        isPlaying = false;
+        document.getElementById('btnPlay').textContent = '▶ 播放';
+        document.getElementById('modeDisplay').textContent = '✅ 完成！';
+    }
+    
+    updateInfoBar();
+    draw();
+    
+    if (isPlaying) {
+        rafId = requestAnimationFrame(animate);
+    }
+}
+
+function updateInfoBar() {
+    const worker = getCurrentWorker(currentTime);
+    document.getElementById('modeDisplay').textContent = 
+        worker === 'jia' ? '🐇 甲工作中...' :
+        worker === 'yi' ? '🐢 乙工作中...' :
+        worker === 'idle' ? '🏗️ 准备开始' : '✅ 完成';
+    
+    document.getElementById('timeDisplay').textContent = `经过时间：${currentTime.toFixed(2)} 小时`;
+    document.getElementById('jiaDone').textContent = getJiaWork(currentTime).toFixed(4);
+    document.getElementById('yiDone').textContent = getYiWork(currentTime).toFixed(4);
+    document.getElementById('totalDone').textContent = getTotalWork(currentTime).toFixed(4);
+    document.getElementById('currentHour').textContent = currentTime.toFixed(2);
+}
+
+function togglePlay() {
+    isPlaying = !isPlaying;
+    const btn = document.getElementById('btnPlay');
+    if (isPlaying) {
+        btn.textContent = '⏸ 暂停';
+        lastTimestamp = null;
+        rafId = requestAnimationFrame(animate);
+    } else {
+        btn.textContent = '▶ 播放';
+        if (rafId) cancelAnimationFrame(rafId);
+    }
+}
+
+function resetScene() {
+    isPlaying = false;
+    currentTime = 0;
+    animationFinished = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    lastTimestamp = null;
+    document.getElementById('btnPlay').textContent = '▶ 播放';
+    document.getElementById('modeDisplay').textContent = '🏗️ 准备开始';
+    updateInfoBar();
+    draw();
+}
+
+function jumpTo(t) {
+    currentTime = Math.min(Math.max(0, t), 20.667);
+    animationFinished = currentTime >= 20.667;
+    updateInfoBar();
+    draw();
+}
+
+function updateSpeed() {
+    speed = parseFloat(document.getElementById('speedSlider').value);
+    document.getElementById('speedVal').textContent = speed.toFixed(2) + 'x';
+}
+
+function speedUpJia() {
+    speed = Math.min(speed + 0.5, 8);
+    document.getElementById('speedSlider').value = speed;
+    document.getElementById('speedVal').textContent = speed.toFixed(2) + 'x';
+}
+
+function speedUpYi() {
+    speed = Math.min(speed + 0.5, 8);
+    document.getElementById('speedSlider').value = speed;
+    document.getElementById('speedVal').textContent = speed.toFixed(2) + 'x';
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// 初始绘制
+draw();
+updateInfoBar();
+</script>
+</body>
+</html>
